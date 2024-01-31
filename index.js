@@ -39,6 +39,9 @@ setInterval(async () => {
     }
 }, 60000);
 
+/**
+ * This will restart the daemon
+ */
 async function restart() {
     fLocked = true;
     console.log('Restart time! - Disconnecting peers...');
@@ -64,4 +67,3 @@ if(process.env.RESTART_WALLET == "t"){
     console.log("restarting wallet every 15 minutes")
     setInterval(restart, 60000 * 15);
 }
-

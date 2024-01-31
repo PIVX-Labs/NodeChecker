@@ -1,7 +1,11 @@
 #!/bin/bash
+# The goal here is to create a .env file with the required enviornment varibles to connect to the pivx daemon.
+# In the future this will also be used to download and install a daemon if one doesn't exist
+
+#Create the env file
 if [ -e .env ]
 then
-    echo "Environment varibles already created"
+    echo "Environment varibles already created, delete or edit the .env file to change the configuration"
 else
     file=".env"
     read -p "RPC wallet Port: " rpcPort
@@ -21,5 +25,5 @@ else
     cat $file
 fi
 
-
+#Start the node module
 node index.js

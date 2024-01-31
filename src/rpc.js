@@ -2,6 +2,9 @@
 
 const NET = require('./net.js');
 
+/**
+ * This creates the JSON to send to the network when requesting data from the wallet
+ */
 class RPC {
     constructor(user, pass, host, port) {
         this.user = user;
