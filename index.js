@@ -1,5 +1,6 @@
 const { exec } = require('child_process');
 const _RPC = require('./src/rpc');
+const NET = require('./src/net.js');
 require('dotenv').config()
 
 // Prep the RPC daemon
@@ -38,6 +39,87 @@ setInterval(async () => {
         }
     }
 }, 60000);
+
+
+/**
+ * Takes two params and returns the block height and the best block hash
+ * @param {string} domain 
+ * @param {string} type 
+ */
+async function checkExplorer(domain, type){
+    let bestBlockData = {}
+    if(type == "TREZOR"){
+        let res = JSON.parse(await NET.get(domain + '/api/',));
+
+        bestBlockData.newestBlock = res.backend.blocks
+        bestBlockData.newestBlockHash = res.backend.bestBlockHash
+
+    }else if(type == "CRYPTOID"){
+        bestBlockData.newestBlock = parseInt(await NET.get(domain + '/api.dws?q=getblockcount'))
+        //wait 5 seconds to abide by there recommendation on how often we should call
+        await setTimeout(function(){},5000)
+        let preStriping = await NET.get(domain + '/api.dws?q=getblockhash&height=' + bestBlockData.newestBlock)
+        bestBlockData.newestBlockHash = preStriping.replace(/['"]+/g, "")
+    }
+
+    return bestBlockData
+}
+
+async function compareToExplorer(){
+    //Grab data from explorers
+
+    let ChainzData = await checkExplorer('https://chainz.cryptoid.info/pivx', "CRYPTOID")
+    let zkbitcoinData = await checkExplorer('https://zkbitcoin.com', "TREZOR")
+
+    let allExplorers = [ChainzData,zkbitcoinData]
+    let matched = []
+    let unmatched = []
+    //  console.log(zkbitcoinData)
+    //  console.log(ChainzData)
+
+    //Validate explorers against each other
+    if(zkbitcoinData.newestBlock == ChainzData.newestBlock){
+        //The height matches on the explorer
+        if(zkbitcoinData.newestBlockHash == ChainzData.newestBlockHash){
+            //The hash matches on both explorers
+            console.log("Everything is perfect")
+        }else{
+            //The hash does not match but the height does
+            console.log(zkbitcoinData.newestBlockHash)
+            console.log(ChainzData.newestBlockHash)
+            console.log("Someone is forked")
+        }
+    }else{
+        //The block height doesn't match
+        //Figure which ones don't match
+        console.log("Someone is forked or slow")
+        //console.log(zkbitcoinData)
+       // console.log(ChainzData)
+
+        console.log(allExplorers.length)
+        for(let i = 0; i < allExplorers.length; i++){
+            //console.log(allExplorers[i].newestBlockHash)
+            //console.log(allExplorers[i-1])
+            if(allExplorers[i] == allExplorers[i-1]){
+                //these two don't match
+                unmatched.push(allExplorers[i])
+                unmatched.push(allExplorers[i-1])
+            }else{
+                matched.push(allExplorers[i])
+                matched.push(allExplorers[i-1])
+            }
+        }
+
+        console.log(unmatched)
+        console.log("Matched:")
+        console.log(matched)
+
+    }
+}
+
+compareToExplorer()
+
+
 
 /**
  * This will restart the daemon
