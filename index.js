@@ -60,6 +60,12 @@ async function checkExplorer(domain, type){
         await setTimeout(function(){},5000)
         let preStriping = await NET.get(domain + '/api.dws?q=getblockhash&height=' + bestBlockData.newestBlock)
         bestBlockData.newestBlockHash = preStriping.replace(/['"]+/g, "")
+    }else if(type == "CRYPTOSCOPE"){
+        bestBlockData.newestBlock = JSON.parse(await NET.get(domain + '/api/getblockcount/')).blockcount
+        //wait 5 seconds to abide by there recommendation on how often we should call
+        await setTimeout(function(){},5000)
+        let preStriping = await NET.get(domain + '/api/getblockhash/?index=' + bestBlockData.newestBlock)
+        bestBlockData.newestBlockHash = preStriping.replace(/['"]+/g, "")
     }
 
     return bestBlockData
@@ -70,51 +76,130 @@ async function compareToExplorer(){
 
     let ChainzData = await checkExplorer('https://chainz.cryptoid.info/pivx', "CRYPTOID")
     let zkbitcoinData = await checkExplorer('https://zkbitcoin.com', "TREZOR")
+    let cryptoscope = await checkExplorer('https://pivx.cryptoscope.io', "CRYPTOSCOPE")
+    let networkFork = false;
 
-    let allExplorers = [ChainzData,zkbitcoinData]
-    let matched = []
-    let unmatched = []
+
+    //name the explorers to make it easier in the future
+    ChainzData.name = "ChainzData"
+    zkbitcoinData.name = "Zkbitcoin"
+    cryptoscope.name = 'Cryptoscope'
+
+
+    let allExplorers = [ChainzData,zkbitcoinData,cryptoscope]
+    // let matched = []
+    // let unmatched = []
     //  console.log(zkbitcoinData)
     //  console.log(ChainzData)
 
-    //Validate explorers against each other
-    if(zkbitcoinData.newestBlock == ChainzData.newestBlock){
-        //The height matches on the explorer
-        if(zkbitcoinData.newestBlockHash == ChainzData.newestBlockHash){
-            //The hash matches on both explorers
-            console.log("Everything is perfect")
-        }else{
-            //The hash does not match but the height does
-            console.log(zkbitcoinData.newestBlockHash)
-            console.log(ChainzData.newestBlockHash)
-            console.log("Someone is forked")
-        }
-    }else{
-        //The block height doesn't match
-        //Figure which ones don't match
-        console.log("Someone is forked or slow")
-        //console.log(zkbitcoinData)
-       // console.log(ChainzData)
+    // //Validate explorers against each other
+    // if(zkbitcoinData.newestBlock == ChainzData.newestBlock){
+    //     //The height matches on the explorer
+    //     if(zkbitcoinData.newestBlockHash == ChainzData.newestBlockHash){
+    //         //The hash matches on both explorers
+    //         console.log("Everything is perfect")
+    //     }else{
+    //         //The hash does not match but the height does
+    //         console.log(zkbitcoinData.newestBlockHash)
+    //         console.log(ChainzData.newestBlockHash)
+    //         console.log("Someone is forked")
+    //     }
+    // }
 
-        console.log(allExplorers.length)
-        for(let i = 0; i < allExplorers.length; i++){
-            //console.log(allExplorers[i].newestBlockHash)
-            //console.log(allExplorers[i-1])
-            if(allExplorers[i] == allExplorers[i-1]){
-                //these two don't match
-                unmatched.push(allExplorers[i])
-                unmatched.push(allExplorers[i-1])
+    // //Check what is going on with the explorers
+
+    // //The block height doesn't match
+    // //Figure which ones don't match
+    // console.log("Someone is forked or slow")
+    // //console.log(zkbitcoinData)
+    // // console.log(ChainzData)
+
+    console.log(allExplorers.length)
+    // for(let i = 1; i < allExplorers.length; i++){
+    //     //if not the past the last explorer
+    //     if(i != allExplorers.length){
+    //         // console.log(i)
+    //         // console.log(allExplorers[i])
+    //         // console.log(allExplorers[i-1])
+    //         if(allExplorers[i].newestBlock != allExplorers[i-1].newestBlock){
+    //             //these two don't match
+    //             unmatched.push(allExplorers[i])
+    //             unmatched.push(allExplorers[i-1])
+    //         }else{
+    //             matched.push(allExplorers[i])
+    //             matched.push(allExplorers[i-1])
+    //         }
+    //     }
+    // }
+
+    
+    //const items = allExplorers.filter(item => item.newestBlock.indexOf('4') !== -1);
+
+    console.log(allExplorers)
+
+    //Creates a new object, finds the matches and lists how many match together
+    let result = allExplorers.reduce( (acc, o) => (acc[o.newestBlock] = (acc[o.newestBlock] || 0)+1, acc), {} );
+    //find how many is the most matches
+    const max = Math.max.apply(null, Object.values(result));
+    //find index of that how many is the most matches
+    var index = Math.max.apply(null, Object.keys(result));
+
+    console.log(result)
+    console.log("================")
+    console.log(max);
+    console.log("================")
+    console.log(index)
+
+    //Figure out if there are multiple matching large instance if so we have a serious fork on the network
+    if(!Array.isArray(index)){
+        console.log("The block that matches the most explorers is: " + index + " and is matched by " + max + " explorers")
+    }else{
+        networkFork = true;
+        console.log("Big ass fork")
+    }
+
+    //Check what our node says compared to the network
+    let localNodeBlockcount = await cRPC.call('getblockcount');
+    console.log(localNodeBlockcount)
+    //check if there are large network-wide issues
+    if(!networkFork){
+        if(localNodeBlockcount == index){
+            console.log("we good")
+        }else{
+            console.log("we not so good")
+            //check if the localNode is less then the index (might be slower then the explorer)
+            if(localNodeBlockcount < index){
+                console.log("less")
+            }else if(localNodeBlockcount > index){
+                console.log("more")
+
             }else{
-                matched.push(allExplorers[i])
-                matched.push(allExplorers[i-1])
+                console.log("something weird do be going on")
             }
         }
-
-        console.log(unmatched)
-        console.log("Matched:")
-        console.log(matched)
-
     }
+
+
+    // //loop through unmatched and check if the difference between blocks is greater then 3
+    // for(let i=1; i<=unmatched.length;i++){
+    //     if(i != unmatched.length){
+    //         if(unmatched[i].newestBlock - unmatched[i-1].newestBlock > 2){
+    //             console.log(unmatched[i].name + " and " + unmatched[i-1].name + " Are off by more then Two blocks")
+
+    //         }else{
+    //             console.log(unmatched[i].name + " and " + unmatched[i-1].name + " are only off by less then two blocks, probably not something to worry about")
+    //         }
+    //     }
+    // }
+
+    // console.log(unmatched)
+    // console.log("Matched:")
+    // console.log(matched)
+    // if(matched.length > unmatched.length){
+    //     //There are more matching explorers then unmatching ones lets just go with the matching ones
+    //     console.log("Top blockcount " + matched[0].newestBlock + " : " + matched[0].newestBlockHash)
+    // }
+
 }
 
 compareToExplorer()
