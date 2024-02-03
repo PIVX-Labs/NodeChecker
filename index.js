@@ -46,34 +46,71 @@ setInterval(async () => {
  * @param {string} domain 
  * @param {string} type 
  */
-async function checkExplorer(domain, type){
-    let bestBlockData = {}
-    if(type == "TREZOR"){
-        let res = JSON.parse(await NET.get(domain + '/api/',));
+async function checkExplorer(domain, type, block){
+    //check if we are looking for a block or just over all info about the block on an explorer
+    if(typeof block == 'undefined'){
+        let bestBlockData = {}
+        if(type == "TREZOR"){
+            let res = JSON.parse(await NET.get(domain + '/api/',));
 
-        bestBlockData.newestBlock = res.backend.blocks
-        bestBlockData.newestBlockHash = res.backend.bestBlockHash
+            bestBlockData.newestBlock = res.backend.blocks
+            bestBlockData.newestBlockHash = res.backend.bestBlockHash
 
-    }else if(type == "CRYPTOID"){
-        bestBlockData.newestBlock = parseInt(await NET.get(domain + '/api.dws?q=getblockcount'))
-        //wait 5 seconds to abide by there recommendation on how often we should call
-        await setTimeout(function(){},5000)
-        let preStriping = await NET.get(domain + '/api.dws?q=getblockhash&height=' + bestBlockData.newestBlock)
-        bestBlockData.newestBlockHash = preStriping.replace(/['"]+/g, "")
-    }else if(type == "CRYPTOSCOPE"){
-        bestBlockData.newestBlock = JSON.parse(await NET.get(domain + '/api/getblockcount/')).blockcount
-        //wait 5 seconds to abide by there recommendation on how often we should call
-        await setTimeout(function(){},5000)
-        let preStriping = await NET.get(domain + '/api/getblockhash/?index=' + bestBlockData.newestBlock)
-        bestBlockData.newestBlockHash = preStriping.replace(/['"]+/g, "")
+        }else if(type == "CRYPTOID"){
+            bestBlockData.newestBlock = parseInt(await NET.get(domain + '/api.dws?q=getblockcount'))
+            //wait 5 seconds to abide by there recommendation on how often we should call
+            await setTimeout(function(){},5000)
+            let preStriping = await NET.get(domain + '/api.dws?q=getblockhash&height=' + bestBlockData.newestBlock)
+            bestBlockData.newestBlockHash = preStriping.replace(/['"]+/g, "")
+        }else if(type == "CRYPTOSCOPE"){
+            bestBlockData.newestBlock = JSON.parse(await NET.get(domain + '/api/getblockcount/')).blockcount
+            //wait 5 seconds to abide by there recommendation on how often we should call
+            await setTimeout(function(){},5000)
+            let preStriping = await NET.get(domain + '/api/getblockhash/?index=' + bestBlockData.newestBlock)
+            bestBlockData.newestBlockHash = preStriping.replace(/['"]+/g, "")
+        }
+
+        return bestBlockData
+    }else{
+        //use the blockid to get the hash value
+        let bestBlockData = {}
+        if(type == "TREZOR"){
+            let res = JSON.parse(await NET.get(domain + '/api/v2/block-index/' + block,));
+            bestBlockData.newestBlockHash = res.blockHash
+        }else if(type == "CRYPTOID"){
+            let preStriping = await NET.get(domain + '/api.dws?q=getblockhash&height=' + block)
+            bestBlockData.newestBlockHash = preStriping.replace(/['"]+/g, "")
+        }else if(type == "CRYPTOSCOPE"){
+            let res = JSON.parse(await NET.get(domain + '/api/getblockhash/?index=' + block))
+            bestBlockData.newestBlockHash = res.hash
+        }
+
+        return bestBlockData
     }
-
-    return bestBlockData
 }
 
 async function compareToExplorer(){
-    //Grab data from explorers
+    //Make another array that holds the explorer information
+    let explorerUrlData = [
+        {
+            variableName:"ChainzData",
+            url:"https://chainz.cryptoid.info/pivx",
+            type:"CRYPTOID",
+        },
+        {
+            variableName:"zkbitcoinData",
+            url:"https://zkbitcoin.com",
+            type:"TREZOR",
+        },
+        {
+            variableName:"cryptoscope",
+            url:"https://pivx.cryptoscope.io",
+            type:"CRYPTOSCOPE",
+        },
+    ]
 
+
+    //Grab data from explorers
     let ChainzData = await checkExplorer('https://chainz.cryptoid.info/pivx', "CRYPTOID")
     let zkbitcoinData = await checkExplorer('https://zkbitcoin.com', "TREZOR")
     let cryptoscope = await checkExplorer('https://pivx.cryptoscope.io', "CRYPTOSCOPE")
@@ -82,60 +119,11 @@ async function compareToExplorer(){
 
     //name the explorers to make it easier in the future
     ChainzData.name = "ChainzData"
-    zkbitcoinData.name = "Zkbitcoin"
-    cryptoscope.name = 'Cryptoscope'
+    zkbitcoinData.name = "zkbitcoinData"
+    cryptoscope.name = 'cryptoscope'
 
 
     let allExplorers = [ChainzData,zkbitcoinData,cryptoscope]
-    // let matched = []
-    // let unmatched = []
-    //  console.log(zkbitcoinData)
-    //  console.log(ChainzData)
-
-    // //Validate explorers against each other
-    // if(zkbitcoinData.newestBlock == ChainzData.newestBlock){
-    //     //The height matches on the explorer
-    //     if(zkbitcoinData.newestBlockHash == ChainzData.newestBlockHash){
-    //         //The hash matches on both explorers
-    //         console.log("Everything is perfect")
-    //     }else{
-    //         //The hash does not match but the height does
-    //         console.log(zkbitcoinData.newestBlockHash)
-    //         console.log(ChainzData.newestBlockHash)
-    //         console.log("Someone is forked")
-    //     }
-    // }
-
-    // //Check what is going on with the explorers
-
-    // //The block height doesn't match
-    // //Figure which ones don't match
-    // console.log("Someone is forked or slow")
-    // //console.log(zkbitcoinData)
-    // // console.log(ChainzData)
-
-    console.log(allExplorers.length)
-    // for(let i = 1; i < allExplorers.length; i++){
-    //     //if not the past the last explorer
-    //     if(i != allExplorers.length){
-    //         // console.log(i)
-    //         // console.log(allExplorers[i])
-    //         // console.log(allExplorers[i-1])
-    //         if(allExplorers[i].newestBlock != allExplorers[i-1].newestBlock){
-    //             //these two don't match
-    //             unmatched.push(allExplorers[i])
-    //             unmatched.push(allExplorers[i-1])
-    //         }else{
-    //             matched.push(allExplorers[i])
-    //             matched.push(allExplorers[i-1])
-    //         }
-    //     }
-    // }
-
-    
-    //const items = allExplorers.filter(item => item.newestBlock.indexOf('4') !== -1);
-
-    console.log(allExplorers)
 
     //Creates a new object, finds the matches and lists how many match together
     let result = allExplorers.reduce( (acc, o) => (acc[o.newestBlock] = (acc[o.newestBlock] || 0)+1, acc), {} );
@@ -159,7 +147,9 @@ async function compareToExplorer(){
     }
 
     //Check what our node says compared to the network
-    let localNodeBlockcount = await cRPC.call('getblockcount');
+    //let localNodeBlockcount = await cRPC.call('getblockcount');
+    //TODO: remove this is only for testing
+    let localNodeBlockcount = 4241732
     console.log(localNodeBlockcount)
     //check if there are large network-wide issues
     if(!networkFork){
@@ -170,35 +160,39 @@ async function compareToExplorer(){
             //check if the localNode is less then the index (might be slower then the explorer)
             if(localNodeBlockcount < index){
                 console.log("less")
+                //lets check the explorers to see if the blockhash is correct
+                //figure out which explorers have more then the localNodeBlockcount
+                for(let i=0; i<allExplorers.length;i++){
+                    //grab localNodeBlockHash
+                    let localNodeBlockHash = await cRPC.call('getblockhash', localNodeBlockcount);
+                    //check if the explorer's block is newer then localNodeBlock
+                    if(allExplorers[i].newestBlock >= localNodeBlockcount){
+                        //send a request for the blockhash we have
+                        let urlCallInfo = explorerUrlData.find((element) => element.variableName == allExplorers[i].name)
+                        console.log(urlCallInfo)
+                        
+                        let blockhashreturn = await checkExplorer(urlCallInfo.url, urlCallInfo.type, localNodeBlockcount)
+                        console.log(blockhashreturn)
+
+                        //check if the hash agrees with our localNode's hash
+                        console.log(localNodeBlockHash)
+                        if(localNodeBlockHash == blockhashreturn.newestBlockHash){
+                            console.log("we good again")
+                        }else{
+                            console.log("we not so good anymore")
+                        }
+
+                    }
+                }
             }else if(localNodeBlockcount > index){
                 console.log("more")
-
+                //Possibly a slow explorer
             }else{
                 console.log("something weird do be going on")
+                //Something really done did broke
             }
         }
     }
-
-
-    // //loop through unmatched and check if the difference between blocks is greater then 3
-    // for(let i=1; i<=unmatched.length;i++){
-    //     if(i != unmatched.length){
-    //         if(unmatched[i].newestBlock - unmatched[i-1].newestBlock > 2){
-    //             console.log(unmatched[i].name + " and " + unmatched[i-1].name + " Are off by more then Two blocks")
-
-    //         }else{
-    //             console.log(unmatched[i].name + " and " + unmatched[i-1].name + " are only off by less then two blocks, probably not something to worry about")
-    //         }
-    //     }
-    // }
-
-    // console.log(unmatched)
-    // console.log("Matched:")
-    // console.log(matched)
-    // if(matched.length > unmatched.length){
-    //     //There are more matching explorers then unmatching ones lets just go with the matching ones
-    //     console.log("Top blockcount " + matched[0].newestBlock + " : " + matched[0].newestBlockHash)
-    // }
 
 }
 
