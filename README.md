@@ -11,6 +11,7 @@ rpcpassword={passwordHere}
 rpcport={portHere}
 rpcbind=127.0.0.1
 ```
+(The default port for pivx is 51470)
 3. `chmod +x install.sh`
 4. `./install.sh`
 5. `Input the same information as was in your pivx.conf file`

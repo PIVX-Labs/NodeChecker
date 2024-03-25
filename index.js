@@ -40,6 +40,38 @@ setInterval(async () => {
     }
 }, 60000);
 
+async function checkDaemonVersion(){
+
+    //First run an RPC call to get the version we are using currently
+    let localDaemonVersion = await(cRPC.call('getinfo'))
+
+    //Tresor check
+    //https://zkbitcoin.com/api/
+    //{"blockbook":{"coin":"PIVX","host":"vmi673749.contaboserver.net","version":"unknown","gitCommit":"unknown","buildTime":"unknown","syncMode":true,"initialSync":false,"inSync":true,"bestHeight":4316470,"lastBlockTime":"2024-03-25T16:42:05.123078708-04:00","lastBlockTimeMs":1711399325123,"inSyncMempool":true,"lastMempoolTime":"2024-03-25T16:43:18.260203913-04:00","mempoolSize":0,"decimals":8,"dbSize":18254277452,"about":"PIVX Blockchain explorer - made with TREZOR Blockbook indexer."},"backend":{"chain":"main","blocks":4316471,"headers":4316471,"bestBlockHash":"8365f08036d0bfd8cf49b581eaf2e168d74c075f19bf41e6b6ed0b01bc1dab20","difficulty":"8637.169758958127","sizeOnDisk":0,"version":"5060100","subversion":"/PIVX Core:5.6.1/","protocolVersion":"70927","timeOffset":-1,"warnings":"","transparentsupply":80854785.83514913,"shieldsupply":726474.24096274,"moneysupply":81581260.07611187}}
+
+    let zkbitcoinDaemonVersion = JSON.parse(await NET.get('https://zkbitcoin.com' + '/api/'))
+
+    if(localDaemonVersion.version != zkbitcoinDaemonVersion.backend.version){
+        console.log("Possibly a bad daemon version Local doesn't match remote: zkbitcoin")
+        //if any of the explorers don't match trigger a github check to figure out the newest github version
+        //https://api.github.com/repos/PIVX-Project/PIVX/releases/latest
+        let githubReleaseInfo = JSON.parse(await NET.get('https://api.github.com/repos/PIVX-Project/PIVX/releases/latest'))
+        //The tag name is almost never a string
+        //remove the version from the tag
+        let githubDaemonVersion = (githubReleaseInfo.name).replace('v','')
+        //Modify the localDaemon hardcoded version to match the github shortened version
+        if((localDaemonVersion.version.toString()).replace(/0/g,'') != (githubDaemonVersion.toString()).replaceAll('.','')){
+            console.log("Local Daemon possibly not up to date")
+        }else{
+            console.log("Local Daemon and github remote daemon version up to date")
+        }
+
+
+    }
+
+
+}
+
 
 /**
  * Takes two params and returns the block height and the best block hash
@@ -132,11 +164,6 @@ async function compareToExplorer(){
     //find index of that how many is the most matches
     var index = Math.max.apply(null, Object.keys(result));
 
-    console.log(result)
-    console.log("================")
-    console.log(max);
-    console.log("================")
-    console.log(index)
 
     //Figure out if there are multiple matching large instance if so we have a serious fork on the network
     if(!Array.isArray(index)){
@@ -147,16 +174,16 @@ async function compareToExplorer(){
     }
 
     //Check what our node says compared to the network
-    //let localNodeBlockcount = await cRPC.call('getblockcount');
+    let localNodeBlockcount = await cRPC.call('getblockcount');
     //TODO: remove this is only for testing
-    let localNodeBlockcount = 4241732
+    //let localNodeBlockcount = 4241732
     console.log(localNodeBlockcount)
     //check if there are large network-wide issues
     if(!networkFork){
         if(localNodeBlockcount == index){
-            console.log("we good")
+            console.log("Local node block count matches remote block count")
         }else{
-            console.log("we not so good")
+            console.log("Local node block count does not match remote node block count")
             //check if the localNode is less then the index (might be slower then the explorer)
             if(localNodeBlockcount < index){
                 console.log("less")
@@ -169,17 +196,17 @@ async function compareToExplorer(){
                     if(allExplorers[i].newestBlock >= localNodeBlockcount){
                         //send a request for the blockhash we have
                         let urlCallInfo = explorerUrlData.find((element) => element.variableName == allExplorers[i].name)
-                        console.log(urlCallInfo)
+                        //console.log(urlCallInfo)
                         
                         let blockhashreturn = await checkExplorer(urlCallInfo.url, urlCallInfo.type, localNodeBlockcount)
-                        console.log(blockhashreturn)
+                        //console.log(blockhashreturn)
 
                         //check if the hash agrees with our localNode's hash
                         console.log(localNodeBlockHash)
                         if(localNodeBlockHash == blockhashreturn.newestBlockHash){
-                            console.log("we good again")
+                            console.log("Hash matches")
                         }else{
-                            console.log("we not so good anymore")
+                            console.log("Hash does not match")
                         }
 
                     }
@@ -196,6 +223,9 @@ async function compareToExplorer(){
 
 }
 
+//We need to check the Daemon version to make sure that it is the correct version that is being used on the network/github etc
+//And give a warning if it isn't
+checkDaemonVersion()
 compareToExplorer()
 
 

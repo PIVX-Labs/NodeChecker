@@ -17,7 +17,7 @@ else
     read -p "Restart Wallet every 15 minutes?: (Y/n) " restartWallet
     case $restartWallet in 
         [yY]) echo "RESTART_WALLET=t" >> $file;
-            read -p "Path to daemon" daemonDirectory;
+            read -p "Path to daemon directory (example ~/Downloads/pivx-5.5.0/bin): " daemonDirectory;
             echo "DAEMON_DIRECTORY="$daemonDirectory >>$file;;
         [nN]) echo "RESTART_WALLET=f">> $file;;
         *) echo "invalid response defaulting to false";;
