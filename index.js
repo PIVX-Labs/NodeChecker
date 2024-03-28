@@ -44,11 +44,7 @@ async function checkDaemonVersion(){
 
     //First run an RPC call to get the version we are using currently
     let localDaemonVersion = await(cRPC.call('getinfo'))
-
-    //Tresor check
-    //https://zkbitcoin.com/api/
-    //{"blockbook":{"coin":"PIVX","host":"vmi673749.contaboserver.net","version":"unknown","gitCommit":"unknown","buildTime":"unknown","syncMode":true,"initialSync":false,"inSync":true,"bestHeight":4316470,"lastBlockTime":"2024-03-25T16:42:05.123078708-04:00","lastBlockTimeMs":1711399325123,"inSyncMempool":true,"lastMempoolTime":"2024-03-25T16:43:18.260203913-04:00","mempoolSize":0,"decimals":8,"dbSize":18254277452,"about":"PIVX Blockchain explorer - made with TREZOR Blockbook indexer."},"backend":{"chain":"main","blocks":4316471,"headers":4316471,"bestBlockHash":"8365f08036d0bfd8cf49b581eaf2e168d74c075f19bf41e6b6ed0b01bc1dab20","difficulty":"8637.169758958127","sizeOnDisk":0,"version":"5060100","subversion":"/PIVX Core:5.6.1/","protocolVersion":"70927","timeOffset":-1,"warnings":"","transparentsupply":80854785.83514913,"shieldsupply":726474.24096274,"moneysupply":81581260.07611187}}
-
+    //Trezor check
     let zkbitcoinDaemonVersion = JSON.parse(await NET.get('https://zkbitcoin.com' + '/api/'))
 
     if(localDaemonVersion.version != zkbitcoinDaemonVersion.backend.version){
@@ -65,13 +61,8 @@ async function checkDaemonVersion(){
         }else{
             console.log("Local Daemon and github remote daemon version up to date")
         }
-
-
     }
-
-
 }
-
 
 /**
  * Takes two params and returns the block height and the best block hash
@@ -141,19 +132,16 @@ async function compareToExplorer(){
         },
     ]
 
-
     //Grab data from explorers
     let ChainzData = await checkExplorer('https://chainz.cryptoid.info/pivx', "CRYPTOID")
     let zkbitcoinData = await checkExplorer('https://zkbitcoin.com', "TREZOR")
     let cryptoscope = await checkExplorer('https://pivx.cryptoscope.io', "CRYPTOSCOPE")
     let networkFork = false;
 
-
     //name the explorers to make it easier in the future
     ChainzData.name = "ChainzData"
     zkbitcoinData.name = "zkbitcoinData"
     cryptoscope.name = 'cryptoscope'
-
 
     let allExplorers = [ChainzData,zkbitcoinData,cryptoscope]
 
@@ -163,7 +151,6 @@ async function compareToExplorer(){
     const max = Math.max.apply(null, Object.values(result));
     //find index of that how many is the most matches
     var index = Math.max.apply(null, Object.keys(result));
-
 
     //Figure out if there are multiple matching large instance if so we have a serious fork on the network
     if(!Array.isArray(index)){
@@ -186,7 +173,7 @@ async function compareToExplorer(){
             console.log("Local node block count does not match remote node block count")
             //check if the localNode is less then the index (might be slower then the explorer)
             if(localNodeBlockcount < index){
-                console.log("less")
+                console.log("Local node has less blocks then remotes")
                 //lets check the explorers to see if the blockhash is correct
                 //figure out which explorers have more then the localNodeBlockcount
                 for(let i=0; i<allExplorers.length;i++){
@@ -196,11 +183,8 @@ async function compareToExplorer(){
                     if(allExplorers[i].newestBlock >= localNodeBlockcount){
                         //send a request for the blockhash we have
                         let urlCallInfo = explorerUrlData.find((element) => element.variableName == allExplorers[i].name)
-                        //console.log(urlCallInfo)
                         
                         let blockhashreturn = await checkExplorer(urlCallInfo.url, urlCallInfo.type, localNodeBlockcount)
-                        //console.log(blockhashreturn)
-
                         //check if the hash agrees with our localNode's hash
                         console.log(localNodeBlockHash)
                         if(localNodeBlockHash == blockhashreturn.newestBlockHash){
@@ -212,23 +196,19 @@ async function compareToExplorer(){
                     }
                 }
             }else if(localNodeBlockcount > index){
-                console.log("more")
+                console.log("Local node Has more blocks then remote")
                 //Possibly a slow explorer
             }else{
-                console.log("something weird do be going on")
-                //Something really done did broke
+                console.log("Unhandled exception:0001")
             }
         }
     }
-
 }
 
 //We need to check the Daemon version to make sure that it is the correct version that is being used on the network/github etc
 //And give a warning if it isn't
 checkDaemonVersion()
 compareToExplorer()
-
-
 
 /**
  * This will restart the daemon
