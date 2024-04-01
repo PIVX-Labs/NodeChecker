@@ -8,12 +8,38 @@ then
     echo "Environment varibles already created, delete or edit the .env file to change the configuration"
 else
     file=".env"
+    #RPC SETTINGS
     read -p "RPC wallet Port: " rpcPort
     echo "WALLET_PORT="$rpcPort > $file
     read -p "RPC wallet user: " rpcUser
     echo "WALLET_USER="$rpcUser >> $file
     read -p "RPC wallet Password: " rpcPassword
     echo "WALLET_PASSWORD="$rpcPassword >> $file
+    #EMAIL SETTINGS
+    read -p "Do you want to set up SMTP? (Y/n): " smtpyesno
+    case $smtpyesno in
+        [yY]) echo "SMTP_YES_NO=t" >> $file;
+            read -p "SMTP HOST: " smtphost;
+            echo "SMTP_HOST="$smtphost >> $file;
+            read -p "SMTP PORT: " smtpport;
+            if [ $smtpport == 465 ]
+            then
+                echo "SMTP_SEC=t">>$file;
+                echo "SMTP_PORT="$smtpport;
+            else
+                echo "SMTP_SEC=f">>$file;
+                echo "SMTP_PORT="$smtpport;
+            fi
+            read -p "SMTP username: " smtpuser;
+            echo "SMTP_USER="$smtpuser >> $file;
+            read -p "SMTP password: " smtppass;
+            echo "SMTP_PASS="$smtppass;
+            read -p "Email you wish to send to: " smtpreceiv;
+            echo "SMTP_RECEIVER="$smtpreceiv;;
+
+        [nN]) echo "SMTP_YES_NO=f">> $file;; 
+    esac
+    #DAEMON SETTINGS
     read -p "Restart Wallet every 15 minutes?: (Y/n) " restartWallet
     case $restartWallet in 
         [yY]) echo "RESTART_WALLET=t" >> $file;

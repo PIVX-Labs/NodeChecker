@@ -1,6 +1,7 @@
 const { exec } = require('child_process');
 const _RPC = require('./src/rpc');
 const NET = require('./src/net.js');
+const nodemailer = require('nodemailer');
 require('dotenv').config()
 
 // Prep the RPC daemon
@@ -29,7 +30,7 @@ setInterval(async () => {
 // Every 1m, create a "good" addnode list, and optionally invalidate some bad blocks here to help with "steering" your chain tip
 setInterval(async () => {
     if (!fLocked) {
-        // Optional: uncomment and edit to invalidate known-bad blocks, helps prevent forks mid-sync
+        //Optional: uncomment and edit to invalidate known-bad blocks, helps prevent forks mid-sync
         //await cRPC.call('invalidateblock', '0000000000000442c69a293eb0713ceb04b2545a443affca4c77d7c3ac866cde');
         const arrPeers = (await cRPC.call('getpeerinfo')).filter(a => a.startingheight > minBlockHeight);
         console.log('=== Healthy-ish Addnode List for users and alternative nodes ===');
@@ -39,6 +40,31 @@ setInterval(async () => {
         }
     }
 }, 60000);
+
+async function sendEmailNotification(error){
+    const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT,
+        secure: process.env.SMTP_SEC, // Use `true` for port 465, `false` for all other ports
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+      
+    // send mail with defined transport object
+    const info = await transporter.sendMail({
+        from: process.env.SMTP_USER, // sender address
+        to: process.env.SMTP_RECEIVER, // list of receivers
+        subject: "NODE MESSAGE " + process.env.NODE_NAME, // Subject line
+        text: "NODE ERROR \n" + error, // plain text body
+        html: "<b>NODE ERROR</b><br>" + error, // html body
+    });
+    
+    console.log("Message sent: %s", info.messageId);
+    
+    info.catch(console.error);
+}
 
 async function checkDaemonVersion(){
 
@@ -162,8 +188,6 @@ async function compareToExplorer(){
 
     //Check what our node says compared to the network
     let localNodeBlockcount = await cRPC.call('getblockcount');
-    //TODO: remove this is only for testing
-    //let localNodeBlockcount = 4241732
     console.log(localNodeBlockcount)
     //check if there are large network-wide issues
     if(!networkFork){

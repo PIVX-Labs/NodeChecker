@@ -1,0 +1,5 @@
+WALLET_PORT=51475
+WALLET_USER=root
+WALLET_PASSWORD=password
+RESTART_WALLET=t
+DAEMON_DIRECTORY=/home/user/Downloads/pivx-5.5.0-x86_64-linux-gnu/pivx-5.5.0/bin
