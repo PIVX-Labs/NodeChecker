@@ -2,7 +2,11 @@ const { exec } = require('child_process');
 const _RPC = require('./src/rpc');
 const NET = require('./src/net.js');
 const nodemailer = require('nodemailer');
+const os = require('os')
 require('dotenv').config()
+
+//set hostname
+const hostname = os.hostname();
 
 // Prep the RPC daemon
 const cRPC = new _RPC(process.env.WALLET_USER, process.env.WALLET_PASSWORD, '127.0.0.1', process.env.WALLET_PORT);
@@ -56,6 +60,7 @@ async function sendEmailNotification(error){
     const info = await transporter.sendMail({
         from: process.env.SMTP_USER, // sender address
         to: process.env.SMTP_RECEIVER, // list of receivers
+        //TODO: create a node identifier either by ip or hostname or both 
         subject: "NODE MESSAGE " + process.env.NODE_NAME, // Subject line
         text: "NODE ERROR \n" + error, // plain text body
         html: "<b>NODE ERROR</b><br>" + error, // html body
@@ -228,6 +233,8 @@ async function compareToExplorer(){
         }
     }
 }
+
+console.log("Starting PIVX Node Checker on " + hostname + "...")
 
 //We need to check the Daemon version to make sure that it is the correct version that is being used on the network/github etc
 //And give a warning if it isn't
