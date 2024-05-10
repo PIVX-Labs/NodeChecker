@@ -5,6 +5,8 @@ const nodemailer = require('nodemailer');
 const os = require('os')
 require('dotenv').config()
 
+//TODO:Check if this node is supposed to be running the panel
+
 //set hostname
 const hostname = os.hostname();
 

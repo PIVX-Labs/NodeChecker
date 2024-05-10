@@ -39,6 +39,14 @@ else
 
         [nN]) echo "SMTP_YES_NO=f">> $file;; 
     esac
+    #ADMIN PANNEL SETTINGS
+    read -p "Do you want the node to connect to or create an admin panel (cnc module)? (Y/n): " cncyesno
+    case $cncyesno in
+        #Ask if we are going to create the admin panel with this node
+            #If so make sure everything is port forwarded correctly or has an open firewall
+                #Make the user create a username and password and store that
+            #If not then ask for the ip or url to the system that is running the admin panel
+    esac
     #DAEMON SETTINGS
     read -p "Restart Wallet every 15 minutes?: (Y/n) " restartWallet
     case $restartWallet in 
