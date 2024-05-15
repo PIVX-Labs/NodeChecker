@@ -27,11 +27,6 @@ async function run() {
 }
 run().catch(console.dir);
 
-app.put('/nodeUpdate', async (req, res)=>{
-
-})
-
-
 app.post('/newNode', async (req, res)=>{
   //Here we will register the node into our database
   const nodeInfo = {
@@ -53,23 +48,54 @@ app.get('/checkOnline', async (req,res)=>{
 
 app.post('/unknownErrorOccurred', async (req,res)=>{
 
+  const nodeInfo = {
+    host : req.put.host,
+    ip : req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+    unknownError : req.put.error,
+    date : date()
+  }
+
   //We are going log it into its own collection linked to the hostname and ip address 
 
 })
 
 app.post('/KnownErrorOccurred', async (req,res)=>{
+  const nodeInfo = {
+    host : req.put.host,
+    ip : req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+    knownError : req.put.error,
+    date : date(),
+
+  }
   //We are going to log the error into its own collection and link it to the hostname and ip address
 })
 
 app.put('/blockCount', async (req,res)=>{
+  const nodeInfo = {
+    host : req.put.host,
+    ip : req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+    localBlockcount : req.put.localBlockcount,
+    remoteBlockCount : req.put.remoteBlockCount
+  }
   //This will update the blockcount on in the main node collection based on the hostname and ip address
 })
 
 app.put('/daemonUpdateAvailable', async (req, res)=>{
+  const nodeInfo = {
+    host: req.put.host,
+    ip : req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+    update : 1
+  }
   //This will change a flag on the main node collection based on the hostname and ip address
 })
 
 app.put('/reportLoad', async (req, res)=>{
+  const nodeInfo = {
+    host: req.put.host,
+    ip : req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+    cpu : req.put.cpu,
+    ram : req.put.ram,
+  }
   //This will update the values we have for load in the main node collection
 })
 
