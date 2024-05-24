@@ -43,9 +43,30 @@ else
     read -p "Do you want the node to connect to or create an admin panel (cnc module)? (Y/n): " cncyesno
     case $cncyesno in
         #Ask if we are going to create the admin panel with this node
-            #If so make sure everything is port forwarded correctly or has an open firewall
+        [yY]) echo "adminPanelSystemEnabled=t" >> $file;
+            read -p "Use this node as an admin panel? (y/n)" : adminpanel;
+            echo "ADMIN_PANEL: " adminpanel
+            if [adminpanel == y]
+            then
+                #We are using this node as the admin backend
+                #If so make sure everything is port forwarded correctly or has an open firewall
+                read -p "Please verify that you have opened the approprate ports and this node is connectable" portsAreOpen
                 #Make the user create a username and password and store that
-            #If not then ask for the ip or url to the system that is running the admin panel
+                read -p "Create a username that you wish to use :" : adminPanelUserName
+                echo "ADMIN_PANEL_USER=" adminPanelUserName
+                read -p "Create a password that you wish to use :" : adminPanelPassword
+                echo "ADMIN_PANEL_PASSWORD=" adminPanelPassword
+                #We need to update these on the first login to store them more securly and remove them from here
+                #This is mainly just to allow for ease of use
+            else
+                #We aren't using this node as the admin backend
+                #If not then ask for the ip or url to the system that is running the admin panel and user/pass
+                read -p "Enter the IP address of the admin panel:" adminPanelIpAdress
+                echo "ADMIN_PANEL_IP=" adminPanelIpAdress
+                read -p "Enter the API key for this node, you can create that in admin panel" adminPanelAPINode
+                echo "ADMIN_PANEL_API=" adminPanelAPINode
+            fi
+            
     esac
     #DAEMON SETTINGS
     read -p "Restart Wallet every 15 minutes?: (Y/n) " restartWallet
