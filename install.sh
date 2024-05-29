@@ -68,6 +68,23 @@ else
             fi
             
     esac
+    #Download bootstrap it gets stuck or forked
+    #Probably will do this if it won't move within x amount of minutes (defaulting to an 30 minutes or 30 blocks)
+    read -p "Download and load bootstrap if the wallet gets stuck: " bootstrap
+    case $bootstrap in 
+        [yY]) echo "BOOTSTRAP=t" >> $file;
+            read -p "Path to data directory (default ~/.pivx): " dataDirectory;
+            echo "DATA_DIRECTORY="$dataDirectory >>$file;;
+        [nN]) echo "BOOTSTRAP=f">> $file;;
+        *) echo "invalid response defaulting to false";;
+    esac
+    #Ask if we want to bootstrap if forked
+    read -p "Download and load bootstrap if wallet is forked: (Y/n) " bootstrapFork
+    case $bootstrapFork in
+        [yY]) echo "BOOTSTRAP_FORK=t" >> $file;;
+        *) echo "BOOTSTRAP_FORK=f" >> $file;;
+    esac
+
     #DAEMON SETTINGS
     read -p "Restart Wallet every 15 minutes?: (Y/n) " restartWallet
     case $restartWallet in 

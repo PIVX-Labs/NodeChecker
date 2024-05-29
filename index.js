@@ -3,6 +3,10 @@ const _RPC = require('./src/rpc');
 const NET = require('./src/net.js');
 const nodemailer = require('nodemailer');
 const os = require('os')
+
+//Required to unzip files
+var yauzl = require("yauzl");
+
 require('dotenv').config()
 
 //TODO:Check if this node is supposed to be running the panel
@@ -234,15 +238,114 @@ async function compareToExplorer(){
             }
         }
     }
+
+    //TODO: check if the bootstrap setting is true and try and fix it by bootstrapping and unzipping
+    //bootstrap();
+
+}
+
+
+async function bootstrap(){
+    if(process.env.BOOTSTRAP == 't' || process.env.BOOTSTRAP_FORK == 't'){
+        //Download from toolbox.pivx.org
+        var http = require('http');
+        var fs = require('fs');
+        
+        var download = function(url, dest, cb) {
+          var file = fs.createWriteStream(dest);
+          var request = http.get(url, function(response) {
+            response.pipe(file);
+            file.on('finish', function() {
+              file.close(cb);  // close() is async, call cb after close completes.
+            });
+          }).on('error', function(err) { // Handle errors
+            fs.unlink(dest); // Delete the file async. (But we don't check the result)
+            if (cb) cb(err.message);
+          });
+        };
+    
+    
+        //Shutdown wallet when done downloading
+        try {await cRPC.call('setnetworkactive', false);} catch(e){}
+        try {await cRPC.call('stop');} catch(e){}
+    
+        //remove data folders: blocks, chainstate, sporks, zerocoin, and files banlist.dat, peers.dat
+        fs.unlink('banlist.dat', (err) => {
+        if (err) throw err;
+        console.log('banlist.txt was deleted');
+        }); 
+        fs.unlink('peers.dat', (err) => {
+            if (err) throw err;
+            console.log('peers.txt was deleted');
+        }); 
+        fs.rmdir('blocks', (err) => {
+        if (err) throw err;
+            console.log('blocks was deleted');
+        }); 
+        fs.rmdir('chainstate', (err) => {
+        if (err) throw err;
+            console.log('blocks was deleted');
+        }); 
+        fs.rmdir('sporks', (err) => {
+        if (err) throw err;
+            console.log('blocks was deleted');
+        }); 
+        fs.rmdir('zerocoin', (err) => {
+        if (err) throw err;
+            console.log('blocks was deleted');
+        }); 
+    
+        //unzip the bootstrap
+        yauzl.open("PIVXsnapshotLatest.zip", {lazyEntries: true}, function(err, zipFile) {
+            if (err) throw err;
+            zipFile.readEntry();
+            zipFile.on("entry", function(entry) {
+              if (/\/$/.test(entry.fileName)) {
+                // Directory file names end with '/'.
+                // Note that entries for directories themselves are optional.
+                // An entry's fileName implicitly requires its parent directories to exist.
+                zipFile.readEntry();
+              } else {
+                // file entry
+                zipFile.openReadStream(entry, function(err, readStream) {
+                  if (err) throw err;
+                  readStream.on("end", function() {
+                    zipFile.readEntry();
+                  });
+                  readStream.pipe(somewhere);
+                });
+              }
+            });
+          });
+    
+        //remove the bootstrap
+        fs.unlink('PIVXsnapshotLatest.zip', (err) => {
+            if (err) throw err;
+                console.log('PIVXsnapshotLatest.zip was deleted');
+            }); 
+        //start the wallet
+        setTimeout(async () => {
+            let directoryConcat = process.env.DAEMON_DIRECTORY + "/pivxd -daemon"
+            console.log('Starting daemon...');
+            exec(directoryConcat, (error, stdout, stderr) => {
+                if (error) console.error(`exec error: ${error}`);
+                console.log(`stdout: ${stdout}`);
+                console.error(`stderr: ${stderr}`);
+                fLocked = false;
+            });
+        }, 60000 * 2);
+        }
 }
 
 console.log("Starting PIVX Node Checker on " + hostname + "...")
 
 //We need to check the Daemon version to make sure that it is the correct version that is being used on the network/github etc
 //And give a warning if it isn't
-checkDaemonVersion()
-compareToExplorer()
-
+//loop this check every two minutes (a block is on avg a minute on pivx)
+async function checkAgainstExternalSources(){
+        checkDaemonVersion()
+        compareToExplorer()
+}
 /**
  * This will restart the daemon
  */
@@ -265,6 +368,10 @@ async function restart() {
         }, 60000 * 2);
     }, 15000);
 }
+
+//Loops------
+//check against external sources every five minutes for wallet updates and block comparison
+setInterval(checkAgainstExternalSources, 60000 * 5);
 
 // Optional in case of wallet memleaks: Restart the daemon every 15m
 if(process.env.RESTART_WALLET == "t"){
