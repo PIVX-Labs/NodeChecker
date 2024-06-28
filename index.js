@@ -4,14 +4,14 @@ const NET = require('./src/net.js');
 const nodemailer = require('nodemailer');
 const os = require('os')
 
-//Required to unzip files
+// Required to unzip files
 var yauzl = require("yauzl");
 
 require('dotenv').config()
 
-//TODO:Check if this node is supposed to be running the panel
+// TODO:Check if this node is supposed to be running the panel
 
-//set hostname
+// set hostname
 const hostname = os.hostname();
 
 // Prep the RPC daemon
@@ -40,8 +40,8 @@ setInterval(async () => {
 // Every 1m, create a "good" addnode list, and optionally invalidate some bad blocks here to help with "steering" your chain tip
 setInterval(async () => {
     if (!fLocked) {
-        //Optional: uncomment and edit to invalidate known-bad blocks, helps prevent forks mid-sync
-        //await cRPC.call('invalidateblock', '0000000000000442c69a293eb0713ceb04b2545a443affca4c77d7c3ac866cde');
+        // Optional: uncomment and edit to invalidate known-bad blocks, helps prevent forks mid-sync
+        // await cRPC.call('invalidateblock', '0000000000000442c69a293eb0713ceb04b2545a443affca4c77d7c3ac866cde');
         const arrPeers = (await cRPC.call('getpeerinfo')).filter(a => a.startingheight > minBlockHeight);
         console.log('=== Healthy-ish Addnode List for users and alternative nodes ===');
         for (const cPeer of arrPeers) {
@@ -66,7 +66,7 @@ async function sendEmailNotification(error){
     const info = await transporter.sendMail({
         from: process.env.SMTP_USER, // sender address
         to: process.env.SMTP_RECEIVER, // list of receivers
-        //TODO: create a node identifier either by ip or hostname or both 
+        // TODO: create a node identifier either by ip or hostname or both 
         subject: "NODE MESSAGE " + process.env.NODE_NAME, // Subject line
         text: "NODE ERROR \n" + error, // plain text body
         html: "<b>NODE ERROR</b><br>" + error, // html body
@@ -79,20 +79,19 @@ async function sendEmailNotification(error){
 
 async function checkDaemonVersion(){
 
-    //First run an RPC call to get the version we are using currently
+    // First run an RPC call to get the version we are using currently
     let localDaemonVersion = await(cRPC.call('getinfo'))
-    //Trezor check
+    // Trezor check
     let zkbitcoinDaemonVersion = JSON.parse(await NET.get('https://zkbitcoin.com' + '/api/'))
 
     if(localDaemonVersion.version != zkbitcoinDaemonVersion.backend.version){
         console.log("Possibly a bad daemon version Local doesn't match remote: zkbitcoin")
-        //if any of the explorers don't match trigger a github check to figure out the newest github version
-        //https://api.github.com/repos/PIVX-Project/PIVX/releases/latest
+        // If any of the explorers don't match trigger a github check to figure out the newest github version
         let githubReleaseInfo = JSON.parse(await NET.get('https://api.github.com/repos/PIVX-Project/PIVX/releases/latest'))
-        //The tag name is almost never a string
-        //remove the version from the tag
+        // The tag name is almost never a string
+        // Remove the version from the tag
         let githubDaemonVersion = (githubReleaseInfo.name).replace('v','')
-        //Modify the localDaemon hardcoded version to match the github shortened version
+        // Modify the localDaemon hardcoded version to match the github shortened version
         if((localDaemonVersion.version.toString()).replace(/0/g,'') != (githubDaemonVersion.toString()).replaceAll('.','')){
             console.log("Local Daemon possibly not up to date")
         }else{
@@ -107,7 +106,7 @@ async function checkDaemonVersion(){
  * @param {string} type 
  */
 async function checkExplorer(domain, type, block){
-    //check if we are looking for a block or just over all info about the block on an explorer
+    // check if we are looking for a block or just over all info about the block on an explorer
     if(typeof block == 'undefined'){
         let bestBlockData = {}
         if(type == "TREZOR"){
@@ -118,13 +117,13 @@ async function checkExplorer(domain, type, block){
 
         }else if(type == "CRYPTOID"){
             bestBlockData.newestBlock = parseInt(await NET.get(domain + '/api.dws?q=getblockcount'))
-            //wait 5 seconds to abide by there recommendation on how often we should call
+            // wait 5 seconds to abide by their recommendation on how often we should call
             await setTimeout(function(){},5000)
             let preStriping = await NET.get(domain + '/api.dws?q=getblockhash&height=' + bestBlockData.newestBlock)
             bestBlockData.newestBlockHash = preStriping.replace(/['"]+/g, "")
         }else if(type == "CRYPTOSCOPE"){
             bestBlockData.newestBlock = JSON.parse(await NET.get(domain + '/api/getblockcount/')).blockcount
-            //wait 5 seconds to abide by there recommendation on how often we should call
+            // wait 5 seconds to abide by there recommendation on how often we should call
             await setTimeout(function(){},5000)
             let preStriping = await NET.get(domain + '/api/getblockhash/?index=' + bestBlockData.newestBlock)
             bestBlockData.newestBlockHash = preStriping.replace(/['"]+/g, "")
@@ -132,7 +131,7 @@ async function checkExplorer(domain, type, block){
 
         return bestBlockData
     }else{
-        //use the blockid to get the hash value
+        // use the blockid to get the hash value
         let bestBlockData = {}
         if(type == "TREZOR"){
             let res = JSON.parse(await NET.get(domain + '/api/v2/block-index/' + block,));
@@ -150,7 +149,7 @@ async function checkExplorer(domain, type, block){
 }
 
 async function compareToExplorer(){
-    //Make another array that holds the explorer information
+    // Make another array that holds the explorer information
     let explorerUrlData = [
         {
             variableName:"ChainzData",
@@ -169,27 +168,27 @@ async function compareToExplorer(){
         },
     ]
 
-    //Grab data from explorers
+    // Grab data from explorers
     let ChainzData = await checkExplorer('https://chainz.cryptoid.info/pivx', "CRYPTOID")
     let zkbitcoinData = await checkExplorer('https://zkbitcoin.com', "TREZOR")
     let cryptoscope = await checkExplorer('https://pivx.cryptoscope.io', "CRYPTOSCOPE")
     let networkFork = false;
 
-    //name the explorers to make it easier in the future
+    // Name the explorers to make it easier in the future
     ChainzData.name = "ChainzData"
     zkbitcoinData.name = "zkbitcoinData"
     cryptoscope.name = 'cryptoscope'
 
     let allExplorers = [ChainzData,zkbitcoinData,cryptoscope]
 
-    //Creates a new object, finds the matches and lists how many match together
+    // Creates a new object, finds the matches and lists how many match together
     let result = allExplorers.reduce( (acc, o) => (acc[o.newestBlock] = (acc[o.newestBlock] || 0)+1, acc), {} );
-    //find how many is the most matches
+    // Find how many is the most matches
     const max = Math.max.apply(null, Object.values(result));
-    //find index of that how many is the most matches
+    // Find index of that how many is the most matches
     var index = Math.max.apply(null, Object.keys(result));
 
-    //Figure out if there are multiple matching large instance if so we have a serious fork on the network
+    // Figure out if there are multiple matching large instance if so we have a serious fork on the network
     if(!Array.isArray(index)){
         console.log("The block that matches the most explorers is: " + index + " and is matched by " + max + " explorers")
     }else{
@@ -197,30 +196,28 @@ async function compareToExplorer(){
         console.log("Big ass fork")
     }
 
-    //Check what our node says compared to the network
+    // Check what our node says compared to the network
     let localNodeBlockcount = await cRPC.call('getblockcount');
     console.log(localNodeBlockcount)
-    //check if there are large network-wide issues
+    // check if there are large network-wide issues
     if(!networkFork){
         if(localNodeBlockcount == index){
             console.log("Local node block count matches remote block count")
         }else{
             console.log("Local node block count does not match remote node block count")
-            //check if the localNode is less then the index (might be slower then the explorer)
+            // check if the localNode is less then the index (might be slower then the explorer)
             if(localNodeBlockcount < index){
                 console.log("Local node has less blocks then remotes")
-                //lets check the explorers to see if the blockhash is correct
-                //figure out which explorers have more then the localNodeBlockcount
+                // figure out which explorers have more then the localNodeBlockcount
                 for(let i=0; i<allExplorers.length;i++){
-                    //grab localNodeBlockHash
+                    // grab localNodeBlockHash
                     let localNodeBlockHash = await cRPC.call('getblockhash', localNodeBlockcount);
-                    //check if the explorer's block is newer then localNodeBlock
+                    // check if the explorer's block is newer then localNodeBlock
                     if(allExplorers[i].newestBlock >= localNodeBlockcount){
-                        //send a request for the blockhash we have
+                        // send a request for the blockhash we have
                         let urlCallInfo = explorerUrlData.find((element) => element.variableName == allExplorers[i].name)
-                        
                         let blockhashreturn = await checkExplorer(urlCallInfo.url, urlCallInfo.type, localNodeBlockcount)
-                        //check if the hash agrees with our localNode's hash
+                        // check if the hash agrees with our localNode's hash
                         console.log(localNodeBlockHash)
                         if(localNodeBlockHash == blockhashreturn.newestBlockHash){
                             console.log("Hash matches")
@@ -232,7 +229,7 @@ async function compareToExplorer(){
                 }
             }else if(localNodeBlockcount > index){
                 console.log("Local node Has more blocks then remote")
-                //Possibly a slow explorer
+                // Possibly a slow explorer
             }else{
                 console.log("Unhandled exception:0001")
             }
@@ -247,7 +244,7 @@ async function compareToExplorer(){
 
 async function bootstrap(){
     if(process.env.BOOTSTRAP == 't' || process.env.BOOTSTRAP_FORK == 't'){
-        //Download from toolbox.pivx.org
+        // Download from toolbox.pivx.org
         var http = require('http');
         var fs = require('fs');
         
@@ -265,11 +262,11 @@ async function bootstrap(){
         };
     
     
-        //Shutdown wallet when done downloading
+        // Shutdown wallet when done downloading
         try {await cRPC.call('setnetworkactive', false);} catch(e){}
         try {await cRPC.call('stop');} catch(e){}
     
-        //remove data folders: blocks, chainstate, sporks, zerocoin, and files banlist.dat, peers.dat
+        // remove data folders: blocks, chainstate, sporks, zerocoin, and files banlist.dat, peers.dat
         fs.unlink('banlist.dat', (err) => {
         if (err) throw err;
         console.log('banlist.txt was deleted');
@@ -295,7 +292,7 @@ async function bootstrap(){
             console.log('blocks was deleted');
         }); 
     
-        //unzip the bootstrap
+        // unzip the bootstrap
         yauzl.open("PIVXsnapshotLatest.zip", {lazyEntries: true}, function(err, zipFile) {
             if (err) throw err;
             zipFile.readEntry();
@@ -318,12 +315,12 @@ async function bootstrap(){
             });
           });
     
-        //remove the bootstrap
+        // remove the bootstrap
         fs.unlink('PIVXsnapshotLatest.zip', (err) => {
             if (err) throw err;
                 console.log('PIVXsnapshotLatest.zip was deleted');
             }); 
-        //start the wallet
+        // start the wallet
         setTimeout(async () => {
             let directoryConcat = process.env.DAEMON_DIRECTORY + "/pivxd -daemon"
             console.log('Starting daemon...');
@@ -339,9 +336,9 @@ async function bootstrap(){
 
 console.log("Starting PIVX Node Checker on " + hostname + "...")
 
-//We need to check the Daemon version to make sure that it is the correct version that is being used on the network/github etc
-//And give a warning if it isn't
-//loop this check every two minutes (a block is on avg a minute on pivx)
+// We need to check the Daemon version to make sure that it is the correct version that is being used on the network/github etc
+// And give a warning if it isn't
+// loop this check every two minutes (a block is on avg a minute on pivx)
 async function checkAgainstExternalSources(){
         checkDaemonVersion()
         compareToExplorer()
@@ -369,8 +366,8 @@ async function restart() {
     }, 15000);
 }
 
-//Loops------
-//check against external sources every five minutes for wallet updates and block comparison
+// Loops------
+// check against external sources every five minutes for wallet updates and block comparison
 setInterval(checkAgainstExternalSources, 60000 * 5);
 
 // Optional in case of wallet memleaks: Restart the daemon every 15m
