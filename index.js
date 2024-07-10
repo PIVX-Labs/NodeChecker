@@ -245,22 +245,21 @@ async function compareToExplorer(){
 async function bootstrap(){
     if(process.env.BOOTSTRAP == 't' || process.env.BOOTSTRAP_FORK == 't'){
         // Download from toolbox.pivx.org
-        var http = require('http');
-        var fs = require('fs');
+        let http = require('http');
+        let fs = require('fs');
         
-        var download = function(url, dest, cb) {
-          var file = fs.createWriteStream(dest);
-          var request = http.get(url, function(response) {
-            response.pipe(file);
-            file.on('finish', function() {
-              file.close(cb);  // close() is async, call cb after close completes.
+        let download = function(url, dest, cb) {
+            let file = fs.createWriteStream(dest);
+            let request = http.get(url, function(response) {
+                response.pipe(file);
+                file.on('finish', function() {
+                  file.close(cb);  // close() is async, call cb after close completes.
+                });
+            }).on('error', function(err) { // Handle errors
+                fs.unlink(dest); // Delete the file async. (But we don't check the result)
+                if (cb) cb(err.message);
             });
-          }).on('error', function(err) { // Handle errors
-            fs.unlink(dest); // Delete the file async. (But we don't check the result)
-            if (cb) cb(err.message);
-          });
         };
-    
     
         // Shutdown wallet when done downloading
         try {await cRPC.call('setnetworkactive', false);} catch(e){}
