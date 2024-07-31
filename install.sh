@@ -32,6 +32,18 @@ else
             echo "WALLET_PASSWORD="$rpcPassword >> $file;;
     esac
     fi
+    # Enable the daemon as a masternode
+    read -p "Would you like to set this daemon up as a masternode?: " setUpAsMasternode
+    case setUpAsMasternode in
+        [yY]) "masternode=1" >> "$homedir/.pivx/pivx.conf"
+            read -p "external Ip address: " externalIpAddress;
+            echo "externalip="$externalIpAddress >> "$homedir/.pivx/pivx.conf"
+            read -p "masternode addr (external Ip with port): " masternodeAddress;
+            echo "masternodeaddr="$masternodeAddress >> "$homedir/.pivx/pivx.conf";
+            read -p "masternode private key: " masternodeprivkey; 
+            echo "masternodeprivkey="$masternodeprivkey;;
+        [nN]) echo "This daemon will not be a masternode"
+
     # EMAIL SETTINGS
     read -p "Do you want to set up SMTP? (Y/n): " smtpyesno
     case $smtpyesno in
