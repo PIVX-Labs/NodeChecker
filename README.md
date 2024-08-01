@@ -2,7 +2,7 @@
 
 This tool is used to help the stablity of pivx nodes. It removes misbehaving peers, restarts the daemon periodically, gives a list of good peers so you can add them to other nodes, and much more.
 
-### Installation
+### Single node Installation
 1. Download and install the latest pivx daemon
 2. Go into the .pivx folder that was created when that daemon was run and create a pivx.conf that file will need to include the following:
 ```
@@ -21,3 +21,7 @@ rpcbind=127.0.0.1
 The program will automatically run but if you need to restart it or change settings just run
 `./install.sh`
 again
+
+
+### Multi node Installation with admin panel
+This is a work in progress and should be treated as a dev only feature
