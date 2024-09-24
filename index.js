@@ -1,5 +1,6 @@
 const { exec } = require('child_process');
 const _RPC = require('./src/rpc');
+const express=require('express');
 const NET = require('./src/net.js');
 const nodemailer = require('nodemailer');
 const os = require('os')
@@ -9,9 +10,29 @@ var yauzl = require("yauzl");
 
 require('dotenv').config()
 
-// TODO:Check if this node is supposed to be running the panel
+//Adding in the express code for the backend and communication for each daemon
+// Create an instance of the express application
+const app=express();
+// Specify a port number for the server
+const port=5000;
+// Start the server and listen to the port
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
 
-// set hostname
+app.get('/stats', async function(request, response) {
+    //We will require an API key on all nodes so that these responses are not public
+    if(request.header.Authorization == process.env.APIKey){
+        //Get the blockcount of the node
+        let responseJson = {}
+        responseJson.blockCount = await cRPC.call('getblockcount');
+        response.json(responseJson)
+    }
+});
+
+
+//Interacting and communicating with the underlying daemon
+//set hostname
 const hostname = os.hostname();
 
 // Prep the RPC daemon
